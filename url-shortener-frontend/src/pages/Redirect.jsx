@@ -1,4 +1,4 @@
-// src/pages/RedirectPage.jsx
+
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -20,7 +20,7 @@ function RedirectPage() {
           alert('This link has expired.');
           navigate('/');
         } else {
-          // Optional: Wait a bit before redirect
+      
           window.location.href = originalUrl;
         }
       } catch {

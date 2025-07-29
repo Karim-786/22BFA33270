@@ -1,86 +1,142 @@
 import React, { useState } from 'react';
-import { TextField, Button, Typography, Box } from '@mui/material';
 import axios from 'axios';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Card,
+  CardContent,
+  Grid,
+  Alert
+} from '@mui/material';
 
 function Home() {
-  const [urls, setUrls] = useState([{ url: '', validity: '', shortcode: '' }]);
-  const [results, setResults] = useState([]);
+  const [inputUrl, setInputUrl] = useState('');
+  const [validity, setValidity] = useState('');
+  const [shortcode, setShortcode] = useState('');
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
 
-  const handleChange = (index, field, value) => {
-    const updated = [...urls];
-    updated[index][field] = value;
-    setUrls(updated);
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setResult(null);
 
-  const addRow = () => {
-    if (urls.length < 5) {
-      setUrls([...urls, { url: '', validity: '', shortcode: '' }]);
-    }
-  };
-
-  const submitUrls = async () => {
-    const allResults = [];
-
-    for (let i = 0; i < urls.length; i++) {
-      const { url, validity, shortcode } = urls[i];
-      if (!url.startsWith('http')) {
-        alert('URL must start with http or https');
-        continue;
-      }
-
-      try {
-        const res = await axios.post('http://localhost:5000/shorturls', {
-          url,
-          validity: parseInt(validity),
-          shortcode,
-        });
-
-        allResults.push(res.data);
-      } catch (e) {
-        alert(`Error on URL ${i + 1}: ` + e.response?.data?.error || 'Error');
-      }
+    if (!inputUrl.startsWith('http')) {
+      setError('Please enter a valid URL starting with http:// or https://');
+      return;
     }
 
-    setResults(allResults);
+    const body = {
+      url: inputUrl,
+      ...(validity && { validity: parseInt(validity) }),
+      ...(shortcode && { shortcode })
+    };
+
+    try {
+      const res = await axios.post('http://localhost:5000/shorturls', body);
+      setResult(res.data);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to shorten the URL.');
+    }
   };
 
   return (
-    <Box p={4}>
-      <Typography variant="h4" gutterBottom>URL Shortener</Typography>
+    <Box
+      sx={{
+        maxWidth: 600,
+        mx: 'auto',
+        mt: 5,
+        px: 3,
+        py: 4,
+        boxShadow: 3,
+        borderRadius: '20px',
+        backgroundColor: '#f9f9f9'
+      }}
+    >
+      <Typography variant="h4" gutterBottom align="center" fontWeight="bold">
+        🔗 URL Shortener
+      </Typography>
 
-      {urls.map((row, i) => (
-        <Box key={i} display="flex" gap={2} mb={2}>
-          <TextField
-            label="Long URL"
-            value={row.url}
-            fullWidth
-            onChange={(e) => handleChange(i, 'url', e.target.value)}
-          />
-          <TextField
-            label="Validity (minutes)"
-            type="number"
-            value={row.validity}
-            onChange={(e) => handleChange(i, 'validity', e.target.value)}
-          />
-          <TextField
-            label="Custom Shortcode"
-            value={row.shortcode}
-            onChange={(e) => handleChange(i, 'shortcode', e.target.value)}
-          />
-        </Box>
-      ))}
+      <Typography variant="subtitle1" gutterBottom align="center">
+        Enter your long URL and optionally provide validity and shortcode
+      </Typography>
 
-      <Button onClick={addRow}>+ Add</Button>
-      <Button variant="contained" sx={{ ml: 2 }} onClick={submitUrls}>Shorten</Button>
+      {error && (
+        <Alert severity="error" sx={{ my: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      <Box mt={4}>
-        {results.map((r, i) => (
-          <Box key={i}>
-            <a href={r.shortLink} target="_blank">{r.shortLink}</a> <br />
-            Expires: {new Date(r.expiry).toLocaleString()}
-          </Box>
-        ))}
-      </Box>
+      <form onSubmit={handleSubmit}>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <TextField
+              label="Original URL"
+              placeholder="https://example.com/..."
+              fullWidth
+              required
+              value={inputUrl}
+              onChange={(e) => setInputUrl(e.target.value)}
+              variant="outlined"
+            />
+          </Grid>
+
+          <Grid item xs={6}>
+            <TextField
+              label="Validity (mins)"
+              placeholder="e.g., 45"
+              fullWidth
+              value={validity}
+              onChange={(e) => setValidity(e.target.value)}
+              variant="outlined"
+            />
+          </Grid>
+
+          <Grid item xs={6}>
+            <TextField
+              label="Preferred Shortcode"
+              placeholder="e.g., mylink123"
+              fullWidth
+              value={shortcode}
+              onChange={(e) => setShortcode(e.target.value)}
+              variant="outlined"
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              sx={{ py: 1.5, borderRadius: '10px' }}
+            >
+              🔧 Shorten URL
+            </Button>
+          </Grid>
+        </Grid>
+      </form>
+
+      {result && (
+        <Card sx={{ mt: 4, backgroundColor: '#e0f7fa', borderRadius: '16px' }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              ✅ Shortened Successfully!
+            </Typography>
+            <Typography variant="body1">
+              <strong>Short Link:</strong>{' '}
+              <a href={result.shortLink} target="_blank" rel="noopener noreferrer">
+                {result.shortLink}
+              </a>
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Expires at:</strong>{' '}
+              {new Date(result.expiry).toLocaleString()}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
     </Box>
   );
 }
